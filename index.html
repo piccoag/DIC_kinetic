@@ -8,17 +8,30 @@
 </head>
 <body>
 
-    <h1>Analizador de Colorimetría de Reacción Química</h1>
+    <h1>Analizador de Colorimetría de Reacción</h1>
+
+    <!-- Nueva Sección de Grabación -->
+    <div id="recording-section">
+        <h2>1a. Grabar Video (Opcional)</h2>
+        <div id="live-preview-container">
+             <video id="live-preview" autoplay muted playsinline></video> <!-- autoplay y muted para vista previa -->
+        </div>
+        <button id="start-record-btn">Iniciar Grabación</button>
+        <button id="stop-record-btn" disabled>Detener Grabación</button>
+        <span id="recording-status" style="margin-left: 15px; color: red; font-weight: bold;"></span>
+    </div>
 
     <div id="setup-section">
-        <h2>1. Carga el Video</h2>
+         <!-- Cambiado el título a 1b -->
+        <h2>1b. Carga el Video Grabado o Sube Uno</h2>
         <input type="file" id="video-input" accept="video/*">
         <p id="opencv-status">Cargando OpenCV.js... (puede tardar)</p>
 
         <h2>2. Selecciona las Regiones de Interés (ROI)</h2>
         <div id="video-roi-container">
+             <!-- Este video ahora mostrará el video grabado o subido -->
             <video id="video-player" controls></video>
-            <canvas id="roi-canvas"></canvas> <!-- Canvas para dibujar ROIs -->
+            <canvas id="roi-canvas"></canvas>
         </div>
         <div id="roi-controls">
             <button id="select-reaction-roi-btn" disabled>Seleccionar ROI Reacción</button>
@@ -42,12 +55,9 @@
         </div>
     </div>
 
-    <!-- Canvas oculto para procesamiento con OpenCV -->
     <canvas id="process-canvas" style="display: none;"></canvas>
 
-    <!-- Librerías -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- ¡ASEGÚRATE de que opencv.js esté en la misma carpeta! -->
     <script async src="opencv.js" onload="onOpenCvReady();" onerror="onOpenCvError();"></script>
     <script src="script.js"></script>
 
