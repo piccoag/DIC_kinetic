@@ -263,51 +263,87 @@ function handleStop() {
 
     if (recordedChunks.length === 0) {
         console.warn("No data was recorded.");
-        // alert("Recording produced no data."); // Avoid alert if possible
         checkEnableAnalyzeButton();
         return;
     }
 
     const blob = new Blob(recordedChunks, { type: recordedChunks[0]?.type || 'video/webm' });
-    const videoURL = URL.createObjectURL(blob);
+    videoFile = blob; // Store the blob temporarily
 
-    if (videoPlayer.src.startsWith('blob:')) { URL.revokeObjectURL(videoPlayer.src); }
-    videoPlayer.src = videoURL;
-    videoFile = blob;
+    console.log("Recorded Blob created, size:", blob.size, "type:", blob.type);
+    console.log("Now converting Blob to Data URL for analysis...");
 
-    resetAnalysis();
-    clearROIs(false);
-    reactionROI = null;
-    backgroundROI = null;
-    reactionCoordsSpan.textContent = "No definida";
-    backgroundCoordsSpan.textContent = "No definida";
+    // *** NUEVO: Usar FileReader para convertir Blob a Data URL ***
+    const reader = new FileReader();
 
-    videoPlayer.onloadedmetadata = () => {
-        videoDuration = videoPlayer.duration;
-        const videoWidth = videoPlayer.videoWidth;
-        const videoHeight = videoPlayer.videoHeight;
-        const displayWidth = videoPlayer.clientWidth || 640; // Fallback width
-        const displayHeight = (videoHeight / videoWidth) * displayWidth;
-        roiCanvas.width = displayWidth;
-        roiCanvas.height = displayHeight;
-        processCanvas.width = videoWidth;
-        processCanvas.height = videoHeight;
-        console.log(`RECORDED video loaded: Duration ${videoDuration.toFixed(2)}s, Dimensions ${videoWidth}x${videoHeight}`);
-        enableRoiButtons(true);
-        checkEnableAnalyzeButton();
-        clearROIs(true);
+    reader.onload = function(e) {
+        console.log("Blob successfully read as Data URL.");
+        const dataUrl = e.target.result;
+
+        // Revoke previous blob URL if it exists from player (just in case)
+        if (videoPlayer.src.startsWith('blob:')) {
+            URL.revokeObjectURL(videoPlayer.src);
+        }
+
+        // Asignar la DATA URL al reproductor
+        videoPlayer.src = dataUrl;
+
+        // El resto de la lógica (reset, limpiar ROIs, onloadedmetadata)
+        // ahora ocurre DESPUÉS de que la Data URL está lista.
+        resetAnalysis();
+        clearROIs(false);
+        reactionROI = null;
+        backgroundROI = null;
+        reactionCoordsSpan.textContent = "No definida";
+        backgroundCoordsSpan.textContent = "No definida";
+
+        videoPlayer.onloadedmetadata = () => {
+            videoDuration = videoPlayer.duration;
+            const videoWidth = videoPlayer.videoWidth;
+            const videoHeight = videoPlayer.videoHeight;
+
+             // Asegurar dimensiones válidas antes de calcular displayHeight
+             if (!videoWidth || !videoHeight) {
+                 console.error("Invalid video dimensions on loadedmetadata:", videoWidth, videoHeight);
+                  alert("Error: No se pudieron obtener las dimensiones del video grabado.");
+                  enableRoiButtons(false);
+                  checkEnableAnalyzeButton();
+                 return;
+             }
+
+            const displayWidth = videoPlayer.clientWidth || 640;
+            const displayHeight = (videoHeight / videoWidth) * displayWidth;
+            roiCanvas.width = displayWidth;
+            roiCanvas.height = displayHeight;
+            processCanvas.width = videoWidth;
+            processCanvas.height = videoHeight;
+            console.log(`RECORDED video loaded (as DataURL): Duration ${videoDuration.toFixed(2)}s, Dimensions ${videoWidth}x${videoHeight}`);
+            enableRoiButtons(true);
+            checkEnableAnalyzeButton();
+            clearROIs(true);
+        };
+        videoPlayer.onerror = (e) => {
+            console.error("Error loading recorded video (as DataURL) into player:", e);
+            alert("Error trying to load recorded video from Data URL.");
+            enableRoiButtons(false);
+            checkEnableAnalyzeButton();
+        };
+        videoPlayer.onseeked = () => { if (reactionROI || backgroundROI) { redrawROIs(); } };
+
+         checkEnableAnalyzeButton(); // Check buttons state after loading
     };
-    videoPlayer.onerror = (e) => {
-        console.error("Error loading recorded video into player:", e);
-        alert("Error trying to load recorded video.");
-        enableRoiButtons(false);
+
+    reader.onerror = function(e) {
+        console.error("FileReader error reading Blob:", e);
+        alert("Error reading the recorded video data.");
         checkEnableAnalyzeButton();
     };
-     videoPlayer.onseeked = () => { if (reactionROI || backgroundROI) { redrawROIs(); } };
 
-    console.log("Recorded video ready. URL:", videoURL);
+    // Iniciar la lectura del Blob como Data URL
+    reader.readAsDataURL(blob);
+
+    // Limpiar chunks ahora que el blob está creado
     recordedChunks = [];
-    checkEnableAnalyzeButton(); // Check again after loading recorded video
 }
 
 
