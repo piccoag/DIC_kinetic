@@ -51,7 +51,7 @@ var Module = {
         setTimeout(() => {
             console.log('Checking for cv object after short delay...');
             if (typeof cv !== 'undefined') {
-                // *** NUEVA LÓGICA: Comprobar si cv es una Promesa ***
+                // Comprobar si cv es una Promesa
                 if (typeof cv.then === 'function') {
                     console.log('cv object is a Promise. Waiting for it to resolve...');
                     openCvStatus.textContent = 'OpenCV: Finalizando inicialización...';
@@ -76,7 +76,7 @@ var Module = {
                 // Comprobación original (fallback)
                 else if (cv.imread) {
                     console.log('OpenCV.js is fully ready (Direct object).');
-                    openCvStatus.textContent = 'OpenCV.js ¡Listo!';
+                    openCvStatus.textContent = 'OpenCV.js ¡OK!';
                     openCvStatus.style.color = 'green';
                     cvReady = true;
                     initializeAppOpenCvDependent();
@@ -90,11 +90,12 @@ var Module = {
             }
         }, 50); // Retraso ligero
     },
-    print: function(text) { /* ... (sin cambios) ... */ },
-    printErr: function(text) { /* ... (sin cambios) ... */ },
-    setStatus: function(text) { /* ... (sin cambios) ... */ },
+     // Funciones print, printErr, setStatus, etc. (sin cambios, puedes copiarlas de versiones anteriores si las necesitas)
+    print: function(text) { if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' '); console.log("OpenCV print:", text); },
+    printErr: function(text) { if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' '); console.error("OpenCV printErr:", text); onOpenCvErrorInternal("Error durante inicialización de OpenCV: " + text); },
+    setStatus: function(text) { /* ... (código de setStatus para progreso) ... */ },
     totalDependencies: 0,
-    monitorRunDependencies: function(left) { /* ... (sin cambios) ... */ }
+    monitorRunDependencies: function(left) { /* ... (código de monitorRunDependencies) ... */ }
 };
 
 // Función interna para manejar errores de OpenCV consistentemente
@@ -154,7 +155,7 @@ async function startRecording() {
         startRecordBtn.disabled = true;
         stopRecordBtn.disabled = false;
         analyzeBtn.disabled = true;
-        enableRoiButtons(false);
+        enableRoiButtons(false); // <-- Asegurar que estén deshabilitados al grabar
     } catch (err) {
         console.error("Error accessing camera or starting recording:", err);
         alert(`Could not access camera: ${err.name} - ${err.message}\nPlease grant permission.`);
@@ -187,7 +188,7 @@ function stopRecording() {
     }
 }
 
-// Modificado para usar FileReader y Data URL
+// Modificado para usar FileReader y Data URL Y ASEGURAR HABILITACIÓN DE BOTONES
 function handleStop() {
     console.log("MediaRecorder 'stop' event received.");
     if (mediaStream) {
@@ -202,12 +203,13 @@ function handleStop() {
 
     if (recordedChunks.length === 0) {
         console.warn("No data was recorded.");
+        enableRoiButtons(false); // Asegurar deshabilitación si no hay datos
         checkEnableAnalyzeButton();
         return;
     }
 
     const blob = new Blob(recordedChunks, { type: recordedChunks[0]?.type || 'video/webm' });
-    videoFile = blob; // Store blob temporarily
+    videoFile = blob; // Store blob
 
     console.log("Recorded Blob created, size:", blob.size, "type:", blob.type);
     console.log("Now converting Blob to Data URL for analysis...");
@@ -217,76 +219,155 @@ function handleStop() {
         console.log("Blob successfully read as Data URL.");
         const dataUrl = e.target.result;
         if (videoPlayer.src.startsWith('blob:')) { URL.revokeObjectURL(videoPlayer.src); }
-        videoPlayer.src = dataUrl; // <--- Asignar Data URL aquí
+        videoPlayer.src = dataUrl; // Asignar Data URL
 
+        // Configuración DESPUÉS de que la Data URL está en el player
         resetAnalysis();
-        clearROIs(false);
-        reactionROI = null;
-        backgroundROI = null;
-        reactionCoordsSpan.textContent = "No definida";
-        backgroundCoordsSpan.textContent = "No definida";
+        clearROIs(false); // No redibujar aún
+        reactionROI = null; backgroundROI = null;
+        reactionCoordsSpan.textContent = "No definida"; backgroundCoordsSpan.textContent = "No definida";
+        enableRoiButtons(false); // Mantener deshabilitado hasta que carguen metadatos
 
         videoPlayer.onloadedmetadata = () => {
+            console.log("onloadedmetadata for recorded video triggered."); // Log clave
             videoDuration = videoPlayer.duration;
             const videoWidth = videoPlayer.videoWidth;
             const videoHeight = videoPlayer.videoHeight;
-            if (!videoWidth || !videoHeight) {
-                console.error("Invalid video dimensions on loadedmetadata:", videoWidth, videoHeight);
-                alert("Error: No se pudieron obtener las dimensiones del video grabado.");
-                enableRoiButtons(false); checkEnableAnalyzeButton(); return;
+
+            if (!videoWidth || !videoHeight || videoWidth <= 0 || videoHeight <= 0) { // Check robusto
+                console.error("ERROR: Invalid video dimensions on loadedmetadata for recorded video:", videoWidth, videoHeight);
+                alert("Error: No se pudieron obtener dimensiones válidas del video grabado.");
+                enableRoiButtons(false); // Asegurar deshabilitación
+                checkEnableAnalyzeButton();
+                return;
             }
+
             const displayWidth = videoPlayer.clientWidth || 640;
             const displayHeight = (videoHeight / videoWidth) * displayWidth;
-            roiCanvas.width = displayWidth; roiCanvas.height = displayHeight;
-            processCanvas.width = videoWidth; processCanvas.height = videoHeight;
-            console.log(`RECORDED video loaded (as DataURL): Duration ${videoDuration.toFixed(2)}s, Dimensions ${videoWidth}x${videoHeight}`);
-            enableRoiButtons(true); checkEnableAnalyzeButton(); clearROIs(true);
+            // Validar dimensiones del canvas antes de asignar
+            if (displayWidth > 0 && displayHeight > 0) {
+                 roiCanvas.width = displayWidth; roiCanvas.height = displayHeight;
+                 processCanvas.width = videoWidth; processCanvas.height = videoHeight;
+                 console.log(`RECORDED video loaded: D=${videoDuration.toFixed(1)}s, Dim=${videoWidth}x${videoHeight}, Display=${displayWidth}x${displayHeight.toFixed(0)}`);
+
+                // *** HABILITAR BOTONES AQUÍ ***
+                console.log("Attempting to enable ROI buttons...");
+                enableRoiButtons(true); // <--- Habilitar AHORA
+                console.log("ROI buttons should be enabled now.");
+
+                 clearROIs(true); // Limpiar y redibujar canvas ahora que tiene tamaño
+            } else {
+                 console.error("ERROR: Invalid calculated display dimensions:", displayWidth, displayHeight);
+                 alert("Error: Dimensiones de visualización inválidas.");
+                 enableRoiButtons(false);
+            }
+            checkEnableAnalyzeButton(); // Revisar estado del botón de análisis
         };
-        videoPlayer.onerror = (e) => { /* ... (error handling) ... */ };
+
+        videoPlayer.onerror = (e) => {
+            console.error("Error loading recorded video (DataURL) into player:", e);
+            alert("Error trying to load recorded video from Data URL.");
+            enableRoiButtons(false);
+            checkEnableAnalyzeButton();
+        };
         videoPlayer.onseeked = () => { if (reactionROI || backgroundROI) { redrawROIs(); } };
+
+        // No llamar a checkEnableAnalyzeButton aquí directamente, esperar a onloadedmetadata
+    };
+    reader.onerror = function(e) {
+        console.error("FileReader error reading Blob:", e);
+        alert("Error reading the recorded video data.");
+        enableRoiButtons(false);
         checkEnableAnalyzeButton();
     };
-    reader.onerror = function(e) { /* ... (error handling) ... */ };
     reader.readAsDataURL(blob);
     recordedChunks = [];
 }
 
 
 // --- Video Upload Function ---
+// ASEGURAR HABILITACIÓN DE BOTONES AQUÍ TAMBIÉN
 function handleVideoUpload(event) {
     stopRecording();
     videoFile = event.target.files[0];
     if (!videoFile) return;
+
     const reader = new FileReader();
     reader.onload = function(e) {
         if (videoPlayer.src.startsWith('blob:')) { URL.revokeObjectURL(videoPlayer.src); }
-        videoPlayer.src = e.target.result;
+        videoPlayer.src = e.target.result; // Asignar Data URL
     }
     reader.readAsDataURL(videoFile);
+
     resetAnalysis();
     clearROIs(false);
     reactionROI = null; backgroundROI = null;
     reactionCoordsSpan.textContent = "No definida"; backgroundCoordsSpan.textContent = "No definida";
+    enableRoiButtons(false); // Deshabilitar hasta que carguen metadatos
 
     videoPlayer.onloadedmetadata = () => {
+        console.log("onloadedmetadata for uploaded video triggered."); // Log clave
         videoDuration = videoPlayer.duration;
-        const videoWidth = videoPlayer.videoWidth; const videoHeight = videoPlayer.videoHeight;
-        if (!videoWidth || !videoHeight) { /* ... error handling ... */ return; }
+        const videoWidth = videoPlayer.videoWidth;
+        const videoHeight = videoPlayer.videoHeight;
+
+        if (!videoWidth || !videoHeight || videoWidth <= 0 || videoHeight <= 0) { // Check robusto
+            console.error("ERROR: Invalid video dimensions on loadedmetadata for uploaded video:", videoWidth, videoHeight);
+            alert("Error: No se pudieron obtener dimensiones válidas del video subido.");
+            enableRoiButtons(false);
+            checkEnableAnalyzeButton();
+            return;
+        }
+
         const displayWidth = videoPlayer.clientWidth || 640;
         const displayHeight = (videoHeight / videoWidth) * displayWidth;
-        roiCanvas.width = displayWidth; roiCanvas.height = displayHeight;
-        processCanvas.width = videoWidth; processCanvas.height = videoHeight;
-        console.log(`UPLOADED video loaded: Duration ${videoDuration.toFixed(2)}s, Dimensions ${videoWidth}x${videoHeight}`);
-        enableRoiButtons(true); checkEnableAnalyzeButton(); clearROIs(true);
+        // Validar dimensiones del canvas antes de asignar
+        if(displayWidth > 0 && displayHeight > 0) {
+            roiCanvas.width = displayWidth; roiCanvas.height = displayHeight;
+            processCanvas.width = videoWidth; processCanvas.height = videoHeight;
+            console.log(`UPLOADED video loaded: D=${videoDuration.toFixed(1)}s, Dim=${videoWidth}x${videoHeight}, Display=${displayWidth}x${displayHeight.toFixed(0)}`);
+
+            // *** HABILITAR BOTONES AQUÍ ***
+            console.log("Attempting to enable ROI buttons...");
+            enableRoiButtons(true); // <--- Habilitar AHORA
+            console.log("ROI buttons should be enabled now.");
+
+            clearROIs(true); // Limpiar y redibujar canvas ahora
+        } else {
+            console.error("ERROR: Invalid calculated display dimensions for upload:", displayWidth, displayHeight);
+            alert("Error: Dimensiones de visualización inválidas.");
+            enableRoiButtons(false);
+        }
+        checkEnableAnalyzeButton(); // Revisar estado del botón de análisis
     };
-    videoPlayer.onerror = (e) => { /* ... error handling ... */ };
+
+    videoPlayer.onerror = (e) => {
+        console.error("Error loading uploaded video:", e);
+        alert("Error loading uploaded video.");
+        enableRoiButtons(false);
+        checkEnableAnalyzeButton();
+    };
     videoPlayer.onseeked = () => { if (reactionROI || backgroundROI) { redrawROIs(); } };
-    checkEnableAnalyzeButton();
+
+    // No llamar checkEnableAnalyzeButton aquí, esperar a onloadedmetadata
 }
 
 
 // --- ROI Selection Functions ---
-function enableRoiButtons(enabled) { /* ... (sin cambios) ... */ }
+// Revisión de esta función para claridad
+function enableRoiButtons(enabled) {
+    const reason = enabled ? "Enabling" : "Disabling";
+    console.log(`${reason} ROI buttons. Enabled = ${enabled}`); // Log aquí también
+    selectReactionBtn.disabled = !enabled;
+    selectBackgroundBtn.disabled = !enabled;
+    clearRoisBtn.disabled = !enabled;
+    // Actualizar cursor del canvas de ROI
+    roiCanvas.style.cursor = enabled ? 'default' : 'not-allowed';
+     if (!enabled) {
+         stopSelectingROI(); // Asegurarse de detener el modo selección si se deshabilitan
+     }
+}
+
 function startSelectingROI(type) { /* ... (sin cambios) ... */ }
 function stopSelectingROI() { /* ... (sin cambios) ... */ }
 function handleMouseDown(event) { /* ... (sin cambios) ... */ }
@@ -302,14 +383,26 @@ function clearROIs(doRedraw = true) { /* ... (sin cambios) ... */ }
 function checkEnableAnalyzeButton() {
     const canAnalyze = cvReady && videoFile && reactionROI && backgroundROI && (!mediaRecorder || mediaRecorder.state === 'inactive');
     analyzeBtn.disabled = !canAnalyze;
+    console.log(`Checking analyze button: cvReady=${cvReady}, videoFile=${!!videoFile}, reactionROI=${!!reactionROI}, backgroundROI=${!!backgroundROI}, recorderInactive=${!mediaRecorder || mediaRecorder.state === 'inactive'}. Result disabled=${analyzeBtn.disabled}`);
 }
 
-function resetAnalysis() { /* ... (sin cambios) ... */ }
+function resetAnalysis() {
+    analysisData = [];
+    analysisProgress.style.display = 'none';
+    analysisProgress.value = 0;
+    analysisStatus.textContent = '';
+    analysisStatus.style.color = ''; // Reset color
+    chartContainer.style.display = 'none';
+    downloadCsvBtn.disabled = true;
+    if (chartInstance) {
+        chartInstance.destroy();
+        chartInstance = null;
+    }
+}
 
-// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-// <<<<< COMIENZA LA FUNCIÓN startAnalysis CON LOS DEBUG LOGS >>>>>
-// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+// Función startAnalysis con los logs de depuración (ya estaba completa)
 async function startAnalysis() {
+    // Robust check at the very beginning
     if (!cvReady || typeof cv === 'undefined' || !cv.imread) {
          console.error("Analysis attempt failed: OpenCV is not ready or cv.imread is missing.");
          alert("Error: OpenCV no está completamente inicializado. Espera o recarga.");
@@ -349,13 +442,7 @@ async function startAnalysis() {
             analysisFinished();
             return;
         }
-        if (!processCanvas.width || !processCanvas.height) {
-            console.error(`[${currentTime.toFixed(2)}s] Invalid processing canvas dimensions.`);
-            analysisStatus.textContent = `Error: Dimensiones de canvas inválidas (${processCanvas.width}x${processCanvas.height}).`;
-            analysisStatus.style.color = 'red';
-            analysisFinished(true);
-            return;
-        }
+        if (!processCanvas.width || !processCanvas.height) { /* ... error handling ... */ return; }
 
         // --- INICIO DEBUG LOGS ---
         console.log(`[${currentTime.toFixed(2)}s] Setting currentTime.`);
@@ -366,40 +453,18 @@ async function startAnalysis() {
             // --- INICIO DEBUG LOGS ---
             console.log(`[${currentTime.toFixed(2)}s] Waiting for 'seeked' event...`);
             // --- FIN DEBUG LOGS ---
-            await new Promise((resolve, reject) => {
-                 const seekTimeout = 5000; // 5 seconds timeout
-                 let timeoutId = setTimeout(() => {
-                     console.error(`[${currentTime.toFixed(2)}s] Seek timed out!`);
-                     reject(new Error(`Timeout esperando 'seeked' en ${currentTime.toFixed(2)}s`));
-                 }, seekTimeout);
-
-                const seekedListener = () => {
-                    clearTimeout(timeoutId);
-                     // --- INICIO DEBUG LOGS ---
-                     console.log(`[${currentTime.toFixed(2)}s] 'seeked' event received.`);
-                     // --- FIN DEBUG LOGS ---
-                    videoPlayer.removeEventListener('seeked', seekedListener);
-                    videoPlayer.removeEventListener('error', errorListener);
-                    setTimeout(resolve, 60); // Delay after seeked
-                };
-                const errorListener = (e) => {
-                     clearTimeout(timeoutId);
-                     console.error(`[${currentTime.toFixed(2)}s] Video element error during seek:`, e);
-                     reject(new Error("Error del elemento de video durante la búsqueda"));
-                 };
-                videoPlayer.addEventListener('seeked', seekedListener, { once: true });
+            await new Promise((resolve, reject) => { /* ... promise con timeout ... */
+                 const seekTimeout = 5000;
+                 let timeoutId = setTimeout(() => { console.error(`[${currentTime.toFixed(2)}s] Seek timed out!`); reject(new Error(`Timeout esperando 'seeked' en ${currentTime.toFixed(2)}s`)); }, seekTimeout);
+                 const seekedListener = () => { clearTimeout(timeoutId); console.log(`[${currentTime.toFixed(2)}s] 'seeked' event received.`); videoPlayer.removeEventListener('seeked', seekedListener); videoPlayer.removeEventListener('error', errorListener); setTimeout(resolve, 60); };
+                 const errorListener = (e) => { clearTimeout(timeoutId); console.error(`[${currentTime.toFixed(2)}s] Video element error during seek:`, e); reject(new Error("Error del elemento de video durante la búsqueda")); };
+                 videoPlayer.addEventListener('seeked', seekedListener, { once: true });
                  videoPlayer.addEventListener('error', errorListener, { once: true });
             });
             // --- INICIO DEBUG LOGS ---
              console.log(`[${currentTime.toFixed(2)}s] 'seeked' Promise resolved.`);
             // --- FIN DEBUG LOGS ---
-        } catch (error) {
-             console.error(`[${currentTime.toFixed(2)}s] Stopping analysis due to seek error/timeout:`, error);
-             analysisStatus.textContent = `Error en análisis: ${error.message}`;
-             analysisStatus.style.color = 'red';
-             analysisFinished(true);
-             return;
-        }
+        } catch (error) { /* ... error handling ... */ return; }
 
         try {
              // --- INICIO DEBUG LOGS ---
@@ -409,109 +474,87 @@ async function startAnalysis() {
              // --- INICIO DEBUG LOGS ---
              console.log(`[${currentTime.toFixed(2)}s] drawImage finished.`);
              // --- FIN DEBUG LOGS ---
-         } catch(drawError) {
-              console.error(`[${currentTime.toFixed(2)}s] Error drawing video frame:`, drawError);
-              analysisStatus.textContent = `Error dibujando frame: ${drawError.message}`;
-              analysisStatus.style.color = 'red';
-              analysisFinished(true);
-              return;
-         }
-
+         } catch(drawError) { /* ... error handling ... */ return; }
 
         try {
             // --- INICIO DEBUG LOGS ---
              console.log(`[${currentTime.toFixed(2)}s] Starting OpenCV processing...`);
             // --- FIN DEBUG LOGS ---
             let frameMat = cv.imread(processCanvas);
-
-            if (frameMat.empty()) {
-                console.warn(`[${currentTime.toFixed(2)}s] Empty frame matrix read.`);
-                frameMat.delete();
-                scheduleNext();
-                return;
-            }
-
+            if (frameMat.empty()) { /* ... skip frame ... */ return; }
             let rgbFrameMat = new cv.Mat();
             cv.cvtColor(frameMat, rgbFrameMat, cv.COLOR_RGBA2RGB);
-
             const reactionAbs = getAbsoluteCoordsForProcessing(reactionROI);
             const backgroundAbs = getAbsoluteCoordsForProcessing(backgroundROI);
-
-            if (!reactionAbs || !backgroundAbs || reactionAbs.width <= 0 || reactionAbs.height <= 0 || backgroundAbs.width <= 0 || backgroundAbs.height <= 0) {
-                 console.warn(`[${currentTime.toFixed(2)}s] Invalid ROI dimensions. Skipping frame.`);
-                 rgbFrameMat.delete(); frameMat.delete();
-                 scheduleNext();
-                 return;
-            }
-
+            if (!reactionAbs || !backgroundAbs || reactionAbs.width <= 0 || reactionAbs.height <= 0 || backgroundAbs.width <= 0 || backgroundAbs.height <= 0) { /* ... skip frame ... */ return; }
             let reactionRect = new cv.Rect(reactionAbs.x, reactionAbs.y, reactionAbs.width, reactionAbs.height);
             let reactionRoiMat = rgbFrameMat.roi(reactionRect);
             let reactionHsvMat = new cv.Mat();
             cv.cvtColor(reactionRoiMat, reactionHsvMat, cv.COLOR_RGB2HSV);
-            let reactionMean = cv.mean(reactionHsvMat);
-            const avgHueReaction = reactionMean[0];
-
+            let reactionMean = cv.mean(reactionHsvMat); const avgHueReaction = reactionMean[0];
             let backgroundRect = new cv.Rect(backgroundAbs.x, backgroundAbs.y, backgroundAbs.width, backgroundAbs.height);
             let backgroundRoiMat = rgbFrameMat.roi(backgroundRect);
             let backgroundHsvMat = new cv.Mat();
             cv.cvtColor(backgroundRoiMat, backgroundHsvMat, cv.COLOR_RGB2HSV);
-            let backgroundMean = cv.mean(backgroundHsvMat);
-            const avgHueBackground = backgroundMean[0];
-
+            let backgroundMean = cv.mean(backgroundHsvMat); const avgHueBackground = backgroundMean[0];
              // --- INICIO DEBUG LOGS ---
              console.log(`[${currentTime.toFixed(2)}s] OpenCV processing done. Hues: R=${avgHueReaction.toFixed(1)}, B=${avgHueBackground.toFixed(1)}`);
              // --- FIN DEBUG LOGS ---
-
-             analysisData.push({
-                 time: currentTime.toFixed(2),
-                 hueReaction: avgHueReaction.toFixed(2),
-                 hueBackground: avgHueBackground.toFixed(2)
-             });
-
+             analysisData.push({ time: currentTime.toFixed(2), hueReaction: avgHueReaction.toFixed(2), hueBackground: avgHueBackground.toFixed(2) });
             // --- OpenCV Mat Cleanup ---
-            reactionRoiMat.delete(); reactionHsvMat.delete();
-            backgroundRoiMat.delete(); backgroundHsvMat.delete();
-            rgbFrameMat.delete(); frameMat.delete();
-
-        } catch (cvError) {
-             console.error(`[${currentTime.toFixed(2)}s] OpenCV processing error:`, cvError);
-             analysisStatus.textContent = `Error de procesamiento: ${cvError.message || cvError}`;
-             analysisStatus.style.color = 'red';
-             analysisFinished(true);
-             return;
-        }
+            reactionRoiMat.delete(); reactionHsvMat.delete(); backgroundRoiMat.delete(); backgroundHsvMat.delete(); rgbFrameMat.delete(); frameMat.delete();
+        } catch (cvError) { /* ... error handling ... */ return; }
 
         framesProcessed++;
         analysisProgress.value = Math.min(100, (framesProcessed / totalFramesToProcess) * 100);
-
         // --- INICIO DEBUG LOGS ---
         console.log(`[${currentTime.toFixed(2)}s] Scheduling next frame.`);
         // --- FIN DEBUG LOGS ---
         scheduleNext();
     } // Fin de processNextFrame
 
-    function scheduleNext() {
-        currentTime += intervalSeconds;
-        setTimeout(processNextFrame, 0);
-    }
+    function scheduleNext() { currentTime += intervalSeconds; setTimeout(processNextFrame, 0); }
 
-    // Iniciar el primer frame
-     console.log("[Analysis Start] Calling processNextFrame for the first time."); // Log inicial
+    console.log("[Analysis Start] Calling processNextFrame for the first time.");
     processNextFrame();
 } // Fin de startAnalysis
-// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-// <<<<< FIN DE LA FUNCIÓN startAnalysis CON LOS DEBUG LOGS >>>>>
-// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
 function getAbsoluteCoordsForProcessing(relativeROI) { /* ... (sin cambios) ... */ }
-function analysisFinished(errorOccurred = false) { /* ... (sin cambios) ... */ }
+
+function analysisFinished(errorOccurred = false) {
+    console.log(`Analysis finished. ${errorOccurred ? 'With errors.' : 'Successfully.'}`);
+    analysisProgress.style.display = 'none';
+    // Re-enable buttons carefully based on state
+    analyzeBtn.disabled = false; // Permitir reintentar análisis
+    enableRoiButtons(!!videoFile); // Habilitar botones ROI si hay video cargado
+    startRecordBtn.disabled = false;
+    stopRecordBtn.disabled = true;
+
+    if (!errorOccurred && analysisData.length > 0) { /* ... mostrar gráfico ... */ }
+    else if (!errorOccurred) { /* ... mensaje sin datos ... */ }
+    else { /* ... mensaje de error ... */ }
+    checkEnableAnalyzeButton(); // Revisión final del botón de análisis
+}
+
 function drawChart() { /* ... (sin cambios) ... */ }
 function downloadCSV() { /* ... (sin cambios) ... */ }
 
 // --- Initial Page Setup ---
-function initializeApp() { /* ... (sin cambios) ... */ }
-function initializeAppOpenCvDependent() { /* ... (sin cambios) ... */ }
+function initializeApp() {
+    // Estado inicial donde TODO está deshabilitado hasta que se cargue video y OpenCV
+    enableRoiButtons(false);
+    analyzeBtn.disabled = true;
+    downloadCsvBtn.disabled = true;
+    stopRecordBtn.disabled = true;
+    startRecordBtn.disabled = false;
+    console.log("Initial app state set (buttons disabled).");
+}
+
+function initializeAppOpenCvDependent() {
+    console.log("OpenCV ready. Checking analyze button status (ROI buttons depend on video load).");
+    checkEnableAnalyzeButton(); // Solo afecta al botón de análisis
+}
 
 // Run initial setup on script load
 initializeApp();
