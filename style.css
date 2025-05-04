@@ -1,0 +1,84 @@
+body {
+    font-family: sans-serif;
+    line-height: 1.6;
+    margin: 20px;
+    background-color: #f4f4f4;
+}
+
+h1, h2, h3 {
+    color: #333;
+}
+
+#setup-section, #analysis-section {
+    background-color: #fff;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Contenedor para superponer video y canvas */
+#video-roi-container {
+    position: relative;
+    max-width: 640px; /* O el ancho que prefieras */
+    margin-bottom: 15px;
+}
+
+#video-player {
+    display: block; /* Para evitar espacio extra debajo */
+    width: 100%;
+    height: auto;
+    background-color: #eee; /* Fondo mientras carga */
+}
+
+#roi-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%; /* Se ajustará en JS al tamaño del video */
+    height: 100%;/* Se ajustará en JS al tamaño del video */
+    cursor: crosshair;
+    border: 1px dashed rgba(0, 0, 0, 0.3); /* Borde sutil */
+    box-sizing: border-box; /* Incluye el borde en el tamaño */
+}
+
+#roi-controls button,
+#analysis-section button {
+    padding: 8px 15px;
+    margin-right: 10px;
+    margin-bottom: 10px; /* Espacio entre botones */
+    cursor: pointer;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: #e7e7e7;
+}
+
+#roi-controls button:disabled,
+#analysis-section button:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+#roi-controls button.active {
+    background-color: #4CAF50; /* Verde */
+    color: white;
+    border-color: #4CAF50;
+}
+
+#roi-controls p, #analysis-section p {
+    font-size: 0.9em;
+    color: #555;
+}
+
+#chart-container {
+    margin-top: 20px;
+    background-color: #fff;
+    padding: 15px;
+    border-radius: 5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+progress {
+    margin-top: 10px;
+    margin-bottom: 10px;
+}

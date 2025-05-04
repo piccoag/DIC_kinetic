@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Colorimetría de Reacción</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <h1>Analizador de Colorimetría de Reacción Química</h1>
+
+    <div id="setup-section">
+        <h2>1. Carga el Video</h2>
+        <input type="file" id="video-input" accept="video/*">
+        <p id="opencv-status">Cargando OpenCV.js... (puede tardar)</p>
+
+        <h2>2. Selecciona las Regiones de Interés (ROI)</h2>
+        <div id="video-roi-container">
+            <video id="video-player" controls></video>
+            <canvas id="roi-canvas"></canvas> <!-- Canvas para dibujar ROIs -->
+        </div>
+        <div id="roi-controls">
+            <button id="select-reaction-roi-btn" disabled>Seleccionar ROI Reacción</button>
+            <button id="select-background-roi-btn" disabled>Seleccionar ROI Fondo</button>
+            <p>ROI Reacción: <span id="reaction-roi-coords">No definida</span></p>
+            <p>ROI Fondo: <span id="background-roi-coords">No definida</span></p>
+            <button id="clear-rois-btn" disabled>Limpiar ROIs</button>
+        </div>
+    </div>
+
+    <div id="analysis-section">
+        <h2>3. Analizar y Ver Resultados</h2>
+        <button id="analyze-btn" disabled>Iniciar Análisis</button>
+        <progress id="analysis-progress" value="0" max="100" style="width: 100%; display: none;"></progress>
+        <p id="analysis-status"></p>
+
+        <div id="chart-container" style="display: none;">
+            <h3>Gráfico Hue vs Tiempo</h3>
+            <canvas id="results-chart"></canvas>
+            <button id="download-csv-btn" disabled>Descargar Datos (CSV)</button>
+        </div>
+    </div>
+
+    <!-- Canvas oculto para procesamiento con OpenCV -->
+    <canvas id="process-canvas" style="display: none;"></canvas>
+
+    <!-- Librerías -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- ¡ASEGÚRATE de que opencv.js esté en la misma carpeta! -->
+    <script async src="opencv.js" onload="onOpenCvReady();" onerror="onOpenCvError();"></script>
+    <script src="script.js"></script>
+
+</body>
+</html>
