@@ -46,18 +46,26 @@ var Module = {
     preRun: [],
     postRun: [],
     onRuntimeInitialized: () => {
-        // ESTE es el punto seguro donde 'cv' está listo para usar
-        if (typeof cv !== 'undefined' && cv.imread) { // Check if cv exists and has a key function
-            console.log('OpenCV.js Runtime Initialized and ready.');
-            openCvStatus.textContent = 'OpenCV.js ¡Listo!';
-            openCvStatus.style.color = 'green';
-            cvReady = true;
-            // Habilitar funcionalidades que dependen de OpenCV
-            initializeAppOpenCvDependent();
-        } else {
-            onOpenCvErrorInternal("Objeto cv no encontrado o incompleto después de onRuntimeInitialized.");
-        }
+        console.log('OpenCV.js Runtime Initialized - Callback received.');
+
+        // *** NUEVO: Esperar un ciclo de eventos ***
+        setTimeout(() => {
+            console.log('Checking for cv object after short delay...');
+            // La verificación ahora está dentro del setTimeout
+            if (typeof cv !== 'undefined' && cv.imread) {
+                console.log('OpenCV.js is fully ready (after delay).');
+                openCvStatus.textContent = 'OpenCV.js ¡Listo!';
+                openCvStatus.style.color = 'green';
+                cvReady = true;
+                initializeAppOpenCvDependent();
+            } else {
+                 // Si sigue sin funcionar, registrar qué es 'cv'
+                 console.error('cv object state after delay:', typeof cv, cv);
+                 onOpenCvErrorInternal("Objeto cv todavía no encontrado/completo después de onRuntimeInitialized y retraso.");
+            }
+        }, 0); // Retraso de 0 milisegundos (pone la función al final de la cola de eventos)
     },
+    // ... resto del objeto Module ...
     // Opcional: para ver el progreso de carga del WASM y otros mensajes
     print: function(text) {
         if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
