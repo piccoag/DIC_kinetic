@@ -45,28 +45,67 @@ let mediaStream = null; // To hold the camera stream
 var Module = {
     preRun: [],
     postRun: [],
+        // ... dentro del objeto Module ...
     onRuntimeInitialized: () => {
         console.log('OpenCV.js Runtime Initialized - Callback received.');
 
-        // *** NUEVO: Esperar un ciclo de eventos ***
+        // Esperar un ciclo de eventos para asegurar que todo esté estable
         setTimeout(() => {
             console.log('Checking for cv object after short delay...');
-            // La verificación ahora está dentro del setTimeout
-            if (typeof cv !== 'undefined' && cv.imread) {
-                console.log('OpenCV.js is fully ready (after delay).');
-                openCvStatus.textContent = 'OpenCV.js ¡Listo!';
-                openCvStatus.style.color = 'green';
-                cvReady = true;
-                initializeAppOpenCvDependent();
+
+            if (typeof cv !== 'undefined') {
+                // *** NUEVA LÓGICA: Comprobar si cv es una Promesa ***
+                if (typeof cv.then === 'function') {
+                    console.log('cv object is a Promise. Waiting for it to resolve...');
+                    openCvStatus.textContent = 'OpenCV: Finalizando inicialización...'; // Nuevo estado
+
+                    cv.then((finalCvObject) => {
+                        // La promesa se resolvió, 'finalCvObject' DEBERÍA ser el objeto real de OpenCV
+                        console.log('OpenCV Promise resolved.');
+                        // Doble verificación de que el objeto resuelto es válido y tiene funciones clave
+                        if (finalCvObject && finalCvObject.imread) {
+                            // ¡Éxito! Asignar el objeto resuelto a la variable global 'cv'
+                            // para que el resto del código funcione como se espera.
+                            cv = finalCvObject;
+                            console.log('OpenCV.js is fully ready (Promise resolved). Global cv object updated.');
+                            openCvStatus.textContent = 'OpenCV.js ¡Listo!';
+                            openCvStatus.style.color = 'green';
+                            cvReady = true;
+                            initializeAppOpenCvDependent();
+                        } else {
+                            console.error('OpenCV Promise resolved, but the result is not the expected cv object:', finalCvObject);
+                            onOpenCvErrorInternal("El objeto final de OpenCV no es válido después de resolver la promesa.");
+                        }
+                    }).catch((err) => {
+                        // La promesa fue rechazada (hubo un error)
+                        console.error('OpenCV Promise was rejected:', err);
+                        onOpenCvErrorInternal("Error al finalizar la inicialización de OpenCV (Promesa rechazada).");
+                    });
+                }
+                // *** FIN NUEVA LÓGICA ***
+
+                // Comprobación original (por si acaso alguna versión NO devuelve una promesa)
+                else if (cv.imread) {
+                    console.log('OpenCV.js is fully ready (Direct object).');
+                    openCvStatus.textContent = 'OpenCV.js ¡Listo!';
+                    openCvStatus.style.color = 'green';
+                    cvReady = true;
+                    initializeAppOpenCvDependent();
+                } else {
+                    // cv existe pero no es promesa ni tiene imread
+                     console.error('cv object exists but is incomplete and not a Promise:', cv);
+                    onOpenCvErrorInternal("Objeto cv encontrado pero incompleto.");
+                }
+
             } else {
-                 // Si sigue sin funcionar, registrar qué es 'cv'
-                 console.error('cv object state after delay:', typeof cv, cv);
-                 onOpenCvErrorInternal("Objeto cv todavía no encontrado/completo después de onRuntimeInitialized y retraso.");
+                // cv ni siquiera existe
+                console.error('cv object is undefined even after delay.');
+                onOpenCvErrorInternal("Variable global cv no definida.");
             }
-        }, 0); // Retraso de 0 milisegundos (pone la función al final de la cola de eventos)
-    },
-    // ... resto del objeto Module ...
-    // Opcional: para ver el progreso de carga del WASM y otros mensajes
+        }, 50); // Aumentar ligeramente el retraso a 50ms por si acaso
+
+    }, // Fin de onRuntimeInitialized
+ 
     print: function(text) {
         if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
         console.log("OpenCV print:", text);
