@@ -68,7 +68,7 @@ var Module = {
                             // para que el resto del código funcione como se espera.
                             cv = finalCvObject;
                             console.log('OpenCV.js is fully ready (Promise resolved). Global cv object updated.');
-                            openCvStatus.textContent = 'OpenCV.js ¡Listo!';
+                            openCvStatus.textContent = 'OpenCV.js ¡OK!';
                             openCvStatus.style.color = 'green';
                             cvReady = true;
                             initializeAppOpenCvDependent();
