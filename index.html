@@ -3,35 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Colorimetría de Reacción</title>
+    <title>Colorimetría de Reacción (Grabación)</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <h1>Analizador de Colorimetría de Reacción Química</h1>
 
-    <!-- Nueva Sección de Grabación -->
+    <!-- Sección 1: Grabación -->
     <div id="recording-section">
-        <h2>1a. Grabar Video (Opcional)</h2>
+        <h2>1. Grabar Video de la Reacción</h2>
         <div id="live-preview-container">
-             <video id="live-preview" autoplay muted playsinline></video> <!-- autoplay y muted para vista previa -->
+             <video id="live-preview" autoplay muted playsinline></video>
         </div>
         <button id="start-record-btn">Iniciar Grabación</button>
         <button id="stop-record-btn" disabled>Detener Grabación</button>
         <span id="recording-status" style="margin-left: 15px; color: red; font-weight: bold;"></span>
+         <p id="opencv-status" style="margin-top: 10px; font-size: 0.9em;">Cargando OpenCV.js...</p> <!-- Movido aquí o podría quitarse si solo se ve en consola -->
     </div>
 
-    <div id="setup-section">
-         <!-- Cambiado el título a 1b -->
-        <h2>1b. Carga el Video Grabado o Sube Uno</h2>
-        <input type="file" id="video-input" accept="video/*">
-        <p id="opencv-status">Cargando OpenCV.js... (puede tardar)</p>
-
-        <h2>2. Selecciona las Regiones de Interés (ROI)</h2>
+    <!-- Sección 2: Selección de ROIs (Antes setup-section) -->
+    <div id="roi-selection-section">
+        <h2>2. Seleccionar Regiones de Interés (ROI)</h2>
+        <p>Una vez detenido el video, aparecerá aquí. Dibuja los recuadros.</p>
         <div id="video-roi-container">
-             <!-- Este video ahora mostrará el video grabado o subido -->
-            <video id="video-player" controls></video>
-            <canvas id="roi-canvas"></canvas> <!-- Canvas para dibujar ROIs -->
+            <video id="video-player" controls></video> <!-- Muestra el video grabado -->
+            <canvas id="roi-canvas"></canvas>
         </div>
         <div id="roi-controls">
             <button id="select-reaction-roi-btn" disabled>Seleccionar ROI Reacción</button>
@@ -42,6 +39,7 @@
         </div>
     </div>
 
+    <!-- Sección 3: Análisis -->
     <div id="analysis-section">
         <h2>3. Analizar y Ver Resultados</h2>
         <button id="analyze-btn" disabled>Iniciar Análisis</button>
@@ -60,7 +58,7 @@
 
     <!-- Librerías -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- ¡ASEGÚRATE de que opencv.js esté en la misma carpeta! -->
+    <!-- opencv.js debe estar en la misma carpeta -->
     <script async src="opencv.js"></script> <!-- Sin onload/onerror -->
     <script src="script.js"></script>
 
