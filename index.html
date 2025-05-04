@@ -8,7 +8,7 @@
 </head>
 <body>
 
-    <h1>Analizador de Colorimetría de Reacción</h1>
+    <h1>Analizador de Colorimetría de Reacción Química</h1>
 
     <!-- Nueva Sección de Grabación -->
     <div id="recording-section">
@@ -31,7 +31,7 @@
         <div id="video-roi-container">
              <!-- Este video ahora mostrará el video grabado o subido -->
             <video id="video-player" controls></video>
-            <canvas id="roi-canvas"></canvas>
+            <canvas id="roi-canvas"></canvas> <!-- Canvas para dibujar ROIs -->
         </div>
         <div id="roi-controls">
             <button id="select-reaction-roi-btn" disabled>Seleccionar ROI Reacción</button>
@@ -55,9 +55,12 @@
         </div>
     </div>
 
+    <!-- Canvas oculto para procesamiento con OpenCV -->
     <canvas id="process-canvas" style="display: none;"></canvas>
 
+    <!-- Librerías -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- ¡ASEGÚRATE de que opencv.js esté en la misma carpeta! -->
     <script async src="opencv.js" onload="onOpenCvReady();" onerror="onOpenCvError();"></script>
     <script src="script.js"></script>
 
