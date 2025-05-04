@@ -9,7 +9,9 @@ h1, h2, h3 {
     color: #333;
 }
 
-#setup-section, #analysis-section {
+#recording-section, /* Añadido */
+#setup-section,
+#analysis-section {
     background-color: #fff;
     padding: 20px;
     margin-bottom: 20px;
@@ -17,7 +19,24 @@ h1, h2, h3 {
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-/* Contenedor para superponer video y canvas */
+/* Estilos para grabación */
+#live-preview-container {
+    max-width: 640px;
+    margin-bottom: 15px;
+    background-color: #333; /* Fondo oscuro para la preview */
+}
+
+#live-preview {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+#recording-status {
+    display: inline-block; /* Para que ocupe espacio solo cuando tenga texto */
+}
+
+/* Contenedor para superponer video y canvas de ROI */
 #video-roi-container {
     position: relative;
     max-width: 640px; /* O el ancho que prefieras */
@@ -37,13 +56,14 @@ h1, h2, h3 {
     left: 0;
     width: 100%; /* Se ajustará en JS al tamaño del video */
     height: 100%;/* Se ajustará en JS al tamaño del video */
-    cursor: crosshair;
+    cursor: default; /* Cambiado a default inicialmente */
     border: 1px dashed rgba(0, 0, 0, 0.3); /* Borde sutil */
     box-sizing: border-box; /* Incluye el borde en el tamaño */
 }
 
 #roi-controls button,
-#analysis-section button {
+#analysis-section button,
+#recording-section button { /* Añadido */
     padding: 8px 15px;
     margin-right: 10px;
     margin-bottom: 10px; /* Espacio entre botones */
@@ -54,7 +74,8 @@ h1, h2, h3 {
 }
 
 #roi-controls button:disabled,
-#analysis-section button:disabled {
+#analysis-section button:disabled,
+#recording-section button:disabled { /* Añadido */
     cursor: not-allowed;
     opacity: 0.6;
 }
