@@ -85,10 +85,23 @@ function resetAnalysis() {
 }
 
 function checkEnableAnalyzeButton() {
-    const canAnalyze = cvReady && videoFile && reactionROI && backgroundROI;
     const recorderActive = mediaRecorder && mediaRecorder.state === 'recording';
-    analyzeBtn.disabled = !canAnalyze || recorderActive;
-    // console.log(`Checking analyze button: cvReady=${cvReady}, videoFile=${!!videoFile}, reactionROI=${!!reactionROI}, backgroundROI=${!!backgroundROI}, recorderActive=${recorderActive}. Result disabled=${analyzeBtn.disabled}`);
+    const conditionsMet = cvReady && videoFile && reactionROI && backgroundROI;
+    const canAnalyze = conditionsMet && !recorderActive;
+
+    // --- DEBUG ---
+    console.log(`Checking analyze button:
+      - cvReady: ${cvReady}
+      - videoFile present: ${!!videoFile}
+      - reactionROI present: ${!!reactionROI}
+      - backgroundROI present: ${!!backgroundROI}
+      - Conditions Met (all above true): ${conditionsMet}
+      - Recorder Active: ${recorderActive}
+      - FINAL canAnalyze: ${canAnalyze}
+      - Setting analyzeBtn.disabled = ${!canAnalyze}`);
+    // --- END DEBUG ---
+
+    analyzeBtn.disabled = !canAnalyze;
 }
 
 // --- OpenCV Loading & Initialization ---
@@ -137,7 +150,23 @@ selectBackgroundBtn.addEventListener('click', () => {
     startSelectingROI('background'); // Llama a startSelectingROI definida más abajo
 });
 clearRoisBtn.addEventListener('click', () => clearROIs(true));
-analyzeBtn.addEventListener('click', startAnalysis);
+// --- Event Listeners ---
+// ... (otros listeners) ...
+analyzeBtn.addEventListener('click', () => {
+    // --- DEBUG ---
+    console.log("Analyze button CLICKED.");
+    // Verificar estado 'disabled' justo al hacer clic
+    console.log(` - Button disabled property at click time: ${analyzeBtn.disabled}`);
+    // --- END DEBUG ---
+
+    // Llamar a startAnalysis solo si no está deshabilitado (aunque ya hay check dentro)
+    if (!analyzeBtn.disabled) {
+         startAnalysis();
+    } else {
+         console.warn("Analyze button click ignored because button is disabled.");
+    }
+});
+// ... (resto de listeners) ...
 downloadCsvBtn.addEventListener('click', downloadCSV);
 startRecordBtn.addEventListener('click', startRecording);
 stopRecordBtn.addEventListener('click', stopRecording);
@@ -403,7 +432,27 @@ function getAbsoluteCoords(relativeROI) { // For drawing on display canvas
 
 // --- Analysis Functions ---
 // startAnalysis con DEBUG LOGS (Sin cambios, ya estaba completo)
-async function startAnalysis() { /* ... */ }
+async function startAnalysis() {
+    // --- DEBUG ---
+    console.log(">>> Entering startAnalysis function...");
+    // --- END DEBUG ---
+
+    // Robust check at the very beginning (ya lo tenías)
+    if (!cvReady || typeof cv === 'undefined' || !cv.imread) {
+         console.error("Analysis attempt failed inside startAnalysis: OpenCV is not ready.");
+         alert("Error: OpenCV no está completamente inicializado. Espera o recarga.");
+         analysisFinished(true);
+         return;
+    }
+     if (analyzeBtn.disabled) {
+         console.warn("startAnalysis called but button is disabled. Exiting.");
+         return; // Salir si el botón está deshabilitado lógicamente
+     }
+
+    console.log("Starting analysis process..."); // Cambiado el log anterior
+    resetAnalysis();
+    // ... (resto de la función startAnalysis sin cambios) ...
+}
 function getAbsoluteCoordsForProcessing(relativeROI) { /* ... */ }
 function analysisFinished(errorOccurred = false) { /* ... */ }
 function drawChart() { /* ... */ }
