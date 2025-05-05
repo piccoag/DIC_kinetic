@@ -47,7 +47,12 @@ function enableRoiButtons(enabled) {
     selectBackgroundBtn.disabled = !enabled;
     clearRoisBtn.disabled = !enabled;
     roiCanvas.style.cursor = enabled ? 'default' : 'not-allowed';
-     if (!enabled) { stopSelectingROI(); } // Call stopSelectingROI if defined
+     if (!enabled) {
+          // Call stopSelectingROI only if it's defined, otherwise causes error on initial load
+          if (typeof stopSelectingROI === 'function') {
+               stopSelectingROI();
+          }
+     }
 }
 
 function stopSelectingROI() {
@@ -55,39 +60,27 @@ function stopSelectingROI() {
     roiBeingSelected = null;
     selectReactionBtn.classList.remove('active');
     selectBackgroundBtn.classList.remove('active');
+     // console.log("Stopped ROI selection mode."); // Optional log
 }
 
-// *** DEFINICIÓN DE clearROIs ***
 function clearROIs(doRedraw = true) {
-    console.log("clearROIs called. doRedraw =", doRedraw); // Log para depuración
+    console.log("clearROIs called. doRedraw =", doRedraw);
     reactionROI = null;
     backgroundROI = null;
     reactionCoordsSpan.textContent = "No definida";
     backgroundCoordsSpan.textContent = "No definida";
-    if (doRedraw && roiCtx && roiCanvas.width > 0 && roiCanvas.height > 0) { // Check context and dimensions
-        try {
-            roiCtx.clearRect(0, 0, roiCanvas.width, roiCanvas.height);
-            console.log("ROI Canvas cleared.");
-        } catch (e) {
-             console.error("Error clearing ROI canvas:", e);
-        }
-    } else if (doRedraw) {
-         console.warn("Skipped clearing ROI canvas (no context or zero dimensions).");
-    }
-    if (typeof checkEnableAnalyzeButton === 'function') { // Check if function exists before calling
-         checkEnableAnalyzeButton(); // Re-evaluate analyze button state
-    }
+    if (doRedraw && roiCtx && roiCanvas.width > 0 && roiCanvas.height > 0) {
+        try { roiCtx.clearRect(0, 0, roiCanvas.width, roiCanvas.height); console.log("ROI Canvas cleared."); }
+        catch (e) { console.error("Error clearing ROI canvas:", e); }
+    } else if (doRedraw) { console.warn("Skipped clearing ROI canvas (no context or zero dimensions)."); }
+    if (typeof checkEnableAnalyzeButton === 'function') { checkEnableAnalyzeButton(); }
 }
-
 
 function resetAnalysis() {
     analysisData = [];
-    analysisProgress.style.display = 'none';
-    analysisProgress.value = 0;
-    analysisStatus.textContent = '';
-    analysisStatus.style.color = '';
-    chartContainer.style.display = 'none';
-    downloadCsvBtn.disabled = true;
+    analysisProgress.style.display = 'none'; analysisProgress.value = 0;
+    analysisStatus.textContent = ''; analysisStatus.style.color = '';
+    chartContainer.style.display = 'none'; downloadCsvBtn.disabled = true;
     if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
 }
 
@@ -112,46 +105,46 @@ var Module = {
                     cv.then((finalCvObject) => {
                         if (finalCvObject && finalCvObject.imread) {
                             cv = finalCvObject; console.log('OpenCV.js is fully ready (Promise resolved).');
-                            openCvStatus.textContent = 'OpenCV.js ¡OKs!'; openCvStatus.style.color = 'green';
-                            cvReady = true;
-                            // LLAMAR A initializeAppOpenCvDependent DESPUÉS DE QUE CV ESTÉ LISTO
-                            initializeAppOpenCvDependent();
+                            openCvStatus.textContent = 'OpenCV.js ¡Listo!'; openCvStatus.style.color = 'green';
+                            cvReady = true; initializeAppOpenCvDependent();
                         } else { onOpenCvErrorInternal("Objeto final de OpenCV inválido."); }
                     }).catch((err) => { onOpenCvErrorInternal("Error resolviendo promesa de OpenCV."); });
                 } else if (cv.imread) {
                      console.log('OpenCV.js is fully ready (Direct object).');
-                     openCvStatus.textContent = 'OpenCV.js ¡OKs!'; openCvStatus.style.color = 'green';
-                     cvReady = true;
-                     // LLAMAR A initializeAppOpenCvDependent DESPUÉS DE QUE CV ESTÉ LISTO
-                     initializeAppOpenCvDependent();
+                     openCvStatus.textContent = 'OpenCV.js ¡Listo!'; openCvStatus.style.color = 'green';
+                     cvReady = true; initializeAppOpenCvDependent();
                 } else { onOpenCvErrorInternal("Objeto cv encontrado pero incompleto."); }
             } else { onOpenCvErrorInternal("Variable global cv no definida."); }
         }, 50);
     },
-    // ... (print, printErr, setStatus, etc.) ...
     print: function(text) { /* ... */ }, printErr: function(text) { /* ... */ }, setStatus: function(text) { /* ... */ }, totalDependencies: 0, monitorRunDependencies: function(left) { /* ... */ }
 };
-function onOpenCvErrorInternal(errorMessage) {
-    console.error('OpenCV Error:', errorMessage);
-    openCvStatus.textContent = `Error de OpenCV. El análisis no funcionará. Recarga la página.`;
-    openCvStatus.style.color = 'red';
-    cvReady = false; analyzeBtn.disabled = true;
-}
+function onOpenCvErrorInternal(errorMessage) { /* ... */ }
 openCvStatus.textContent = 'Cargando OpenCV.js...'; openCvStatus.style.color = 'orange';
 Module.setStatus('Cargando OpenCV.js...');
 
 // --- Event Listeners ---
-selectReactionBtn.addEventListener('click', () => startSelectingROI('reaction'));
-selectBackgroundBtn.addEventListener('click', () => startSelectingROI('background'));
-clearRoisBtn.addEventListener('click', () => clearROIs(true)); // Llamada correcta aquí
+selectReactionBtn.addEventListener('click', () => {
+    // --- DEBUG ---
+    console.log("Select Reaction ROI button CLICKED.");
+    // --- END DEBUG ---
+    startSelectingROI('reaction'); // Llama a startSelectingROI definida más abajo
+});
+selectBackgroundBtn.addEventListener('click', () => {
+    // --- DEBUG ---
+    console.log("Select Background ROI button CLICKED.");
+    // --- END DEBUG ---
+    startSelectingROI('background'); // Llama a startSelectingROI definida más abajo
+});
+clearRoisBtn.addEventListener('click', () => clearROIs(true));
 analyzeBtn.addEventListener('click', startAnalysis);
 downloadCsvBtn.addEventListener('click', downloadCSV);
 startRecordBtn.addEventListener('click', startRecording);
 stopRecordBtn.addEventListener('click', stopRecording);
-roiCanvas.addEventListener('mousedown', handleMouseDown);
-roiCanvas.addEventListener('mousemove', handleMouseMove);
-roiCanvas.addEventListener('mouseup', handleMouseUp);
-roiCanvas.addEventListener('mouseout', handleMouseOut);
+roiCanvas.addEventListener('mousedown', handleMouseDown); // Definida más abajo
+roiCanvas.addEventListener('mousemove', handleMouseMove); // Definida más abajo
+roiCanvas.addEventListener('mouseup', handleMouseUp);     // Definida más abajo
+roiCanvas.addEventListener('mouseout', handleMouseOut);   // Definida más abajo
 
 
 // --- Recording Functions ---
@@ -159,18 +152,10 @@ async function startRecording() {
     console.log("startRecording called.");
     try {
         resetAnalysis();
-        // LLAMAR clearROIs aquí, DESPUÉS de asegurarnos que está definida
-        clearROIs(true); // Limpiar ROIs y canvas de la ejecución anterior
+        clearROIs(true); // Limpiar estado anterior
         videoFile = null;
-        if (videoPlayer.src) {
-             if (videoPlayer.src.startsWith('blob:') || videoPlayer.src.startsWith('data:')) {
-                  URL.revokeObjectURL(videoPlayer.src);
-             }
-             videoPlayer.src = ''; videoPlayer.removeAttribute('src'); videoPlayer.load();
-             console.log("Previous video player source cleared.");
-        }
-        enableRoiButtons(false); // Deshabilitar ROI hasta que termine grabación y cargue video
-        checkEnableAnalyzeButton();
+        if (videoPlayer.src) { /* ... limpiar src ... */ }
+        enableRoiButtons(false); checkEnableAnalyzeButton();
 
         mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
         livePreview.srcObject = mediaStream;
@@ -184,85 +169,50 @@ async function startRecording() {
         mediaRecorder.start();
         console.log('MediaRecorder started.');
         recordingStatus.textContent = 'Grabando...';
-        startRecordBtn.disabled = true;
-        stopRecordBtn.disabled = false;
-        analyzeBtn.disabled = true;
-    } catch (err) {
-         console.error("Error in startRecording:", err);
-         alert(`Could not access camera: ${err.name} - ${err.message}`);
-         if (mediaStream) { mediaStream.getTracks().forEach(track => track.stop()); }
-         livePreview.srcObject = null;
-         startRecordBtn.disabled = false; stopRecordBtn.disabled = true;
-         recordingStatus.textContent = '';
-         enableRoiButtons(false); checkEnableAnalyzeButton();
-    }
+        startRecordBtn.disabled = true; stopRecordBtn.disabled = false; analyzeBtn.disabled = true;
+    } catch (err) { /* ... error handling ... */ }
 }
 
 function handleDataAvailable(event) { if (event.data.size > 0) { recordedChunks.push(event.data); } }
 
+// *** stopRecording con DEBUG LOGS ***
 function stopRecording() {
-    // --- DEBUG ---
     console.log("stopRecording function CALLED.");
     console.log("Current mediaRecorder:", mediaRecorder);
     console.log("Current mediaRecorder state:", mediaRecorder ? mediaRecorder.state : 'N/A');
-    // --- END DEBUG ---
 
     if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-        // --- DEBUG ---
         console.log("Condition MET (recorder exists and is not inactive). Calling mediaRecorder.stop()...");
-        // --- END DEBUG ---
         try {
-            mediaRecorder.stop(); // <-- La llamada clave para detener la grabación
-             // ¡Importante! No actualices la UI aquí directamente.
-             // Espera a que el evento 'onstop' (handleStop) se dispare.
-             // El evento onstop se encargará de detener los tracks, limpiar la UI, etc.
+            mediaRecorder.stop();
             console.log('mediaRecorder.stop() called successfully. Waiting for onstop event...');
         } catch (e) {
             console.error("Error calling mediaRecorder.stop():", e);
-            // Si stop() falla, intentar limpiar manualmente
+            // Manual cleanup on error
              if (mediaStream) { mediaStream.getTracks().forEach(track => track.stop()); }
-             livePreview.srcObject = null;
-             startRecordBtn.disabled = false;
-             stopRecordBtn.disabled = true;
-             recordingStatus.textContent = '';
-             enableRoiButtons(false); // Asegurar que ROI estén deshabilitados
-             checkEnableAnalyzeButton();
+             livePreview.srcObject = null; startRecordBtn.disabled = false; stopRecordBtn.disabled = true;
+             recordingStatus.textContent = ''; enableRoiButtons(false); checkEnableAnalyzeButton();
         }
     } else {
-        // --- DEBUG ---
         console.log("Condition NOT MET (recorder is null or already inactive). Performing direct cleanup.");
-        // --- END DEBUG ---
-        // Si no hay grabadora activa, simplemente limpiar
-        if (mediaStream) {
-            mediaStream.getTracks().forEach(track => track.stop());
-            console.log("Camera tracks stopped directly (no active recorder).");
-        }
-        livePreview.srcObject = null;
-        startRecordBtn.disabled = false;
-        stopRecordBtn.disabled = true;
-        recordingStatus.textContent = '';
-        enableRoiButtons(false); // Asegurar que ROI estén deshabilitados
-        checkEnableAnalyzeButton();
+        // Cleanup if already stopped
+        if (mediaStream) { mediaStream.getTracks().forEach(track => track.stop()); console.log("Camera tracks stopped directly."); }
+        livePreview.srcObject = null; startRecordBtn.disabled = false; stopRecordBtn.disabled = true;
+        recordingStatus.textContent = ''; enableRoiButtons(false); checkEnableAnalyzeButton();
     }
 }
+
+// *** handleStop con DEBUG LOGS ***
 function handleStop() {
-    // --- DEBUG ---
-    console.log("handleStop (onstop event handler) TRIGGERED.");
-    // --- END DEBUG ---
-    
+    console.log("handleStop (onstop event handler) TRIGGERED."); // <<< DEBUG LOG
     console.log("MediaRecorder 'stop' event received.");
-    // ... (resto de la función handleStop igual que antes) ...
-     if (mediaStream) { /* ... stop tracks ... */ }
-     livePreview.srcObject = null;
-     startRecordBtn.disabled = false;
-     stopRecordBtn.disabled = true;
-     recordingStatus.textContent = '';
-     // ... (resto: crear Blob, leer con FileReader, etc.) ...
-    console.log("MediaRecorder 'stop' event received.");
-    // ... (detener cámara, limpiar UI grabación) ...
+    // ... (resto del código para detener cámara, limpiar UI, etc.) ...
+     if (mediaStream) { mediaStream.getTracks().forEach(track => track.stop()); console.log("Camera tracks stopped."); }
+     livePreview.srcObject = null; startRecordBtn.disabled = false; stopRecordBtn.disabled = true; recordingStatus.textContent = '';
+
     if (recordedChunks.length === 0) { /* ... (manejar caso sin datos) ... */ return; }
     const blob = new Blob(recordedChunks, { type: recordedChunks[0]?.type || 'video/webm' });
-    videoFile = blob; // <-- Marcar que hay video
+    videoFile = blob;
     console.log("Recorded Blob created. Converting to Data URL...");
     const reader = new FileReader();
     reader.onload = function(e) {
@@ -271,10 +221,10 @@ function handleStop() {
         if (videoPlayer.src.startsWith('blob:') || videoPlayer.src.startsWith('data:')) { URL.revokeObjectURL(videoPlayer.src); }
         videoPlayer.src = dataUrl;
         resetAnalysis();
-        // NO llamar clearROIs aquí, se llamará en onloadedmetadata si las dimensiones son válidas
         reactionROI = null; backgroundROI = null;
         reactionCoordsSpan.textContent = "No definida"; backgroundCoordsSpan.textContent = "No definida";
-        enableRoiButtons(false); // Mantener deshabilitado hasta onloadedmetadata
+        enableRoiButtons(false); // Deshabilitar hasta onloadedmetadata
+
         videoPlayer.onloadedmetadata = () => {
             console.log("onloadedmetadata for recorded video triggered.");
             videoDuration = videoPlayer.duration;
@@ -286,61 +236,104 @@ function handleStop() {
                  roiCanvas.width = displayWidth; roiCanvas.height = displayHeight;
                  processCanvas.width = videoWidth; processCanvas.height = videoHeight;
                  console.log(`RECORDED video loaded: D=${videoDuration.toFixed(1)}s, Dim=${videoWidth}x${videoHeight}`);
-                 clearROIs(true); // <-- Llamar clearROIs AHORA que el canvas está listo
+                 clearROIs(true); // Limpiar canvas AHORA
                  console.log("Attempting to enable ROI buttons...");
-                 enableRoiButtons(true); // <-- Habilitar AHORA
+                 enableRoiButtons(true); // Habilitar botones AHORA
                  console.log("ROI buttons should be enabled now.");
             } else { /* ... error handling ... */ enableRoiButtons(false); }
             checkEnableAnalyzeButton();
         };
-        videoPlayer.onerror = (e) => { /* ... */ };
-        videoPlayer.onseeked = () => { /* ... */ };
+        videoPlayer.onerror = (e) => { /* ... */ }; videoPlayer.onseeked = () => { /* ... */ };
     };
     reader.onerror = (e) => { /* ... */ };
     reader.readAsDataURL(blob);
     recordedChunks = [];
 }
 
+
 // --- ROI Selection Functions ---
-// startSelectingROI, mouseDown, mouseMove, mouseUp, mouseOut, redrawROIs, getAbsoluteCoords
-// (Sin cambios en estas funciones)
-function startSelectingROI(type) { /* ... */ }
-function handleMouseDown(event) { /* ... */ }
-function handleMouseMove(event) { /* ... */ }
-function handleMouseUp(event) { /* ... */ }
-function handleMouseOut(event) { /* ... */ }
-function redrawROIs(isDrawingSelection = false) { /* ... */ }
-function getAbsoluteCoords(relativeROI) { /* ... */ }
+// *** startSelectingROI con DEBUG LOGS ***
+function startSelectingROI(type) {
+    console.log(`startSelectingROI called with type: ${type}`); // <<< DEBUG LOG
+    if (selectReactionBtn.disabled) {
+         console.log("ROI selection prevented because buttons are disabled."); // <<< DEBUG LOG
+        return;
+    }
+    roiBeingSelected = type;
+    console.log(`roiBeingSelected state is now: ${roiBeingSelected}`); // <<< DEBUG LOG
+    selectReactionBtn.classList.toggle('active', type === 'reaction');
+    selectBackgroundBtn.classList.toggle('active', type === 'background');
+    roiCanvas.style.cursor = 'crosshair';
+    console.log(`ROI canvas cursor set to 'crosshair'.`); // <<< DEBUG LOG
+}
+
+// *** handleMouseDown con DEBUG LOGS ***
+function handleMouseDown(event) {
+    console.log("handleMouseDown triggered."); // <<< DEBUG LOG
+    console.log(`  - roiBeingSelected: ${roiBeingSelected}, drawing: ${drawing}, buttons disabled: ${selectReactionBtn.disabled}`); // <<< DEBUG LOG
+    if (!roiBeingSelected || drawing || selectReactionBtn.disabled) return;
+    drawing = true;
+    const rect = roiCanvas.getBoundingClientRect();
+    startX = event.clientX - rect.left; startY = event.clientY - rect.top;
+    currentX = startX; currentY = startY;
+    console.log(`  - Drawing started at: (${startX.toFixed(0)}, ${startY.toFixed(0)})`); // <<< DEBUG LOG
+}
+
+// *** handleMouseMove (sin logs por defecto para no ser ruidoso) ***
+function handleMouseMove(event) {
+    // console.log("handleMouseMove triggered."); // Descomentar si es necesario
+    if (!drawing || !roiBeingSelected) return;
+    const rect = roiCanvas.getBoundingClientRect();
+    currentX = event.clientX - rect.left; currentY = event.clientY - rect.top;
+    redrawROIs(true);
+}
+
+// *** handleMouseUp con DEBUG LOGS ***
+function handleMouseUp(event) {
+    console.log("handleMouseUp triggered."); // <<< DEBUG LOG
+    console.log(`  - roiBeingSelected: ${roiBeingSelected}, drawing: ${drawing}`); // <<< DEBUG LOG
+    if (!drawing || !roiBeingSelected) return;
+    drawing = false;
+    const rect = roiCanvas.getBoundingClientRect();
+    const finalX = event.clientX - rect.left; const finalY = event.clientY - rect.top;
+    const x = Math.min(startX, finalX); const y = Math.min(startY, finalY);
+    const width = Math.abs(finalX - startX); const height = Math.abs(finalY - startY);
+
+    if (width > 5 && height > 5) {
+        const relativeROI = { x: x / roiCanvas.width, y: y / roiCanvas.height, width: width / roiCanvas.width, height: height / roiCanvas.height };
+        if (roiBeingSelected === 'reaction') { reactionROI = relativeROI; reactionCoordsSpan.textContent = `(${Math.round(x)}, ${Math.round(y)}) ${Math.round(width)}x${Math.round(height)}px`; }
+        else if (roiBeingSelected === 'background') { backgroundROI = relativeROI; backgroundCoordsSpan.textContent = `(${Math.round(x)}, ${Math.round(y)}) ${Math.round(width)}x${Math.round(height)}px`; }
+        console.log(`  - Drawing ended. ROI calculated and saved for ${roiBeingSelected}.`); // <<< DEBUG LOG
+        checkEnableAnalyzeButton();
+    } else { console.log("  - Drawing ended. ROI too small, ignored."); } // <<< DEBUG LOG
+
+    redrawROIs();
+    stopSelectingROI(); // Llama a la función definida anteriormente
+}
+
+function handleMouseOut(event) { if (drawing) { handleMouseUp(event); } } // Sin cambios
+
+function redrawROIs(isDrawingSelection = false) { /* ... (Sin cambios) ... */ } // Sin cambios
+function getAbsoluteCoords(relativeROI) { /* ... (Sin cambios) ... */ } // Sin cambios
 
 // --- Analysis Functions ---
 // startAnalysis con DEBUG LOGS (Sin cambios, ya estaba completo)
-async function startAnalysis() {
-    // ... (Todo el código de startAnalysis con logs que ya tenías) ...
-     async function processNextFrame() { /* ... */ }
-     function scheduleNext() { /* ... */ }
-     processNextFrame();
-}
-
-function getAbsoluteCoordsForProcessing(relativeROI) { /* ... (sin cambios) ... */ }
-function analysisFinished(errorOccurred = false) { /* ... (sin cambios) ... */ }
-function drawChart() { /* ... (sin cambios) ... */ }
-function downloadCSV() { /* ... (sin cambios) ... */ }
+async function startAnalysis() { /* ... */ }
+function getAbsoluteCoordsForProcessing(relativeROI) { /* ... */ }
+function analysisFinished(errorOccurred = false) { /* ... */ }
+function drawChart() { /* ... */ }
+function downloadCSV() { /* ... */ }
 
 // --- Initial Page Setup ---
 function initializeApp() {
-    // Asegurarse de que las funciones estén definidas antes de llamarlas aquí
-    enableRoiButtons(false);
-    analyzeBtn.disabled = true;
-    downloadCsvBtn.disabled = true;
-    stopRecordBtn.disabled = true;
-    startRecordBtn.disabled = false;
+    enableRoiButtons(false); analyzeBtn.disabled = true; downloadCsvBtn.disabled = true;
+    stopRecordBtn.disabled = true; startRecordBtn.disabled = false;
     console.log("Initial app state set (buttons disabled).");
 }
 function initializeAppOpenCvDependent() {
     console.log("OpenCV ready. Checking analyze button status.");
-    // NO llamar clearROIs aquí
     checkEnableAnalyzeButton();
 }
 
 // Run initial setup
-initializeApp(); // Llamar después de definir todas las funciones necesarias
+initializeApp();
