@@ -112,7 +112,7 @@ var Module = {
                     cv.then((finalCvObject) => {
                         if (finalCvObject && finalCvObject.imread) {
                             cv = finalCvObject; console.log('OpenCV.js is fully ready (Promise resolved).');
-                            openCvStatus.textContent = 'OpenCV.js ¡OK!'; openCvStatus.style.color = 'green';
+                            openCvStatus.textContent = 'OpenCV.js ¡OKs!'; openCvStatus.style.color = 'green';
                             cvReady = true;
                             // LLAMAR A initializeAppOpenCvDependent DESPUÉS DE QUE CV ESTÉ LISTO
                             initializeAppOpenCvDependent();
@@ -120,7 +120,7 @@ var Module = {
                     }).catch((err) => { onOpenCvErrorInternal("Error resolviendo promesa de OpenCV."); });
                 } else if (cv.imread) {
                      console.log('OpenCV.js is fully ready (Direct object).');
-                     openCvStatus.textContent = 'OpenCV.js ¡OK!'; openCvStatus.style.color = 'green';
+                     openCvStatus.textContent = 'OpenCV.js ¡OKs!'; openCvStatus.style.color = 'green';
                      cvReady = true;
                      // LLAMAR A initializeAppOpenCvDependent DESPUÉS DE QUE CV ESTÉ LISTO
                      initializeAppOpenCvDependent();
