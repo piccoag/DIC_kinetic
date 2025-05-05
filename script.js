@@ -433,26 +433,63 @@ function getAbsoluteCoords(relativeROI) { // For drawing on display canvas
 // --- Analysis Functions ---
 // startAnalysis con DEBUG LOGS (Sin cambios, ya estaba completo)
 async function startAnalysis() {
-    // --- DEBUG ---
-    console.log(">>> Entering startAnalysis function...");
-    // --- END DEBUG ---
+    // ... (inicio de startAnalysis igual) ...
+    console.log("Starting analysis process...");
+    resetAnalysis();
+    analyzeBtn.disabled = true; // <-- Intento de deshabilitar
+    enableRoiButtons(false);
+    startRecordBtn.disabled = true;
+    stopRecordBtn.disabled = true;
+    analysisProgress.style.display = 'block';
+    analysisStatus.textContent = 'Analizando...';
+    analysisStatus.style.color = 'orange';
 
-    // Robust check at the very beginning (ya lo tenías)
-    if (!cvReady || typeof cv === 'undefined' || !cv.imread) {
-         console.error("Analysis attempt failed inside startAnalysis: OpenCV is not ready.");
-         alert("Error: OpenCV no está completamente inicializado. Espera o recarga.");
-         analysisFinished(true);
+    const intervalSeconds = 0.5;
+    let currentTime = 0;
+    const analysisEndTime = videoDuration > 0.1 ? videoDuration - 0.01 : 0;
+    // --- DEBUG ---
+    console.log(` - Calculated analysisEndTime: ${analysisEndTime?.toFixed(2)}`);
+    console.log(` - Initial currentTime: ${currentTime}`);
+    // --- END DEBUG ---
+    // Validar analysisEndTime
+    if (typeof analysisEndTime === 'undefined' || isNaN(analysisEndTime) || analysisEndTime < 0) {
+         console.error("Invalid analysisEndTime calculated:", analysisEndTime, "from videoDuration:", videoDuration);
+         alert("Error: No se pudo determinar la duración válida del video para el análisis.");
+         analysisFinished(true); // Finalizar con error
          return;
     }
-     if (analyzeBtn.disabled) {
-         console.warn("startAnalysis called but button is disabled. Exiting.");
-         return; // Salir si el botón está deshabilitado lógicamente
-     }
 
-    console.log("Starting analysis process..."); // Cambiado el log anterior
-    resetAnalysis();
-    // ... (resto de la función startAnalysis sin cambios) ...
-}
+    const totalFramesToProcess = Math.max(1, Math.ceil(analysisEndTime / intervalSeconds));
+    let framesProcessed = 0;
+
+    if (!videoPlayer.paused) { videoPlayer.pause(); }
+
+    // Bucle principal de procesamiento (definición igual)
+    async function processNextFrame() {
+         // --- DEBUG ---
+         console.log(`>>> TOP of processNextFrame [${currentTime?.toFixed(2)}s]`);
+         // --- END DEBUG ---
+
+         console.log(`[${currentTime.toFixed(2)}s] Entering processNextFrame.`);
+         // ... (resto de processNextFrame igual con sus logs internos) ...
+    }
+
+    function scheduleNext() { currentTime += intervalSeconds; setTimeout(processNextFrame, 0); }
+
+    // --- DEBUG ---
+    console.log("[Analysis Start] ABOUT TO CALL processNextFrame for the first time.");
+    // --- END DEBUG ---
+    try {
+        // Llamar a la función para iniciar el bucle
+         processNextFrame(); // <--- La llamada inicial
+         // --- DEBUG ---
+         console.log("[Analysis Start] Initial call to processNextFrame finished executing synchronously (next steps are async).");
+         // --- END DEBUG ---
+    } catch (initialError) {
+         console.error("Error DURING the very first call to processNextFrame:", initialError);
+         analysisFinished(true); // Finalizar con error si la primera llamada falla
+    }
+} // Fin de startAnalysis
 function getAbsoluteCoordsForProcessing(relativeROI) { /* ... */ }
 function analysisFinished(errorOccurred = false) { /* ... */ }
 function drawChart() { /* ... */ }
