@@ -313,8 +313,93 @@ function handleMouseUp(event) {
 
 function handleMouseOut(event) { if (drawing) { handleMouseUp(event); } } // Sin cambios
 
-function redrawROIs(isDrawingSelection = false) { /* ... (Sin cambios) ... */ } // Sin cambios
-function getAbsoluteCoords(relativeROI) { /* ... (Sin cambios) ... */ } // Sin cambios
+function redrawROIs(isDrawingSelection = false) {
+    // --- DEBUG ---
+    console.log(`redrawROIs called. isDrawingSelection = ${isDrawingSelection}, drawing = ${drawing}`);
+    console.log(`  - Canvas dimensions: ${roiCanvas.width}x${roiCanvas.height}`);
+    console.log(`  - roiCtx valid? ${!!roiCtx}`);
+    console.log(`  - reactionROI:`, reactionROI);
+    console.log(`  - backgroundROI:`, backgroundROI);
+    // --- END DEBUG ---
+
+    // Ensure canvas context is valid and canvas has dimensions
+     if (!roiCtx || roiCanvas.width <= 0 || roiCanvas.height <= 0) {
+          console.warn("Skipping redrawROIs: Invalid context or zero dimensions.");
+          return;
+     }
+
+    // Clear previous drawings
+    try {
+        roiCtx.clearRect(0, 0, roiCanvas.width, roiCanvas.height);
+    } catch (e) {
+        console.error("Error clearing ROI canvas in redrawROIs:", e);
+        return; // Don't proceed if clearing fails
+    }
+
+    roiCtx.lineWidth = 2; // Ensure line width is set
+
+    // Draw defined Reaction ROI
+    if (reactionROI) {
+        roiCtx.strokeStyle = 'rgba(255, 0, 0, 0.8)'; // Red, ensure alpha > 0
+        const absCoords = getAbsoluteCoords(reactionROI);
+        // --- DEBUG ---
+        console.log(`  - Drawing Reaction ROI. Coords:`, absCoords);
+        // --- END DEBUG ---
+        if (absCoords && absCoords.width > 0 && absCoords.height > 0) { // Check valid coords
+            roiCtx.strokeRect(absCoords.x, absCoords.y, absCoords.width, absCoords.height);
+        } else {
+             console.warn("  - Skipped drawing Reaction ROI due to invalid coords:", absCoords);
+        }
+    }
+
+    // Draw defined Background ROI
+    if (backgroundROI) {
+        roiCtx.strokeStyle = 'rgba(0, 0, 255, 0.8)'; // Blue, ensure alpha > 0
+        const absCoords = getAbsoluteCoords(backgroundROI);
+        // --- DEBUG ---
+        console.log(`  - Drawing Background ROI. Coords:`, absCoords);
+        // --- END DEBUG ---
+        if (absCoords && absCoords.width > 0 && absCoords.height > 0) { // Check valid coords
+            roiCtx.strokeRect(absCoords.x, absCoords.y, absCoords.width, absCoords.height);
+        } else {
+            console.warn("  - Skipped drawing Background ROI due to invalid coords:", absCoords);
+        }
+    }
+
+    // Draw the rectangle currently being selected
+    if (isDrawingSelection && drawing && roiBeingSelected) {
+        const currentWidth = currentX - startX;
+        const currentHeight = currentY - startY;
+        // --- DEBUG ---
+        console.log(`  - Drawing current selection (${roiBeingSelected}). Start: (${startX.toFixed(0)}, ${startY.toFixed(0)}), Size: (${currentWidth.toFixed(0)}, ${currentHeight.toFixed(0)})`);
+        // --- END DEBUG ---
+        roiCtx.strokeStyle = (roiBeingSelected === 'reaction') ? 'rgba(255, 0, 0, 0.5)' : 'rgba(0, 0, 255, 0.5)';
+        roiCtx.setLineDash([5, 5]);
+        roiCtx.strokeRect(startX, startY, currentWidth, currentHeight);
+        roiCtx.setLineDash([]); // Reset dash pattern
+    }
+}
+function getAbsoluteCoords(relativeROI) { // For drawing on display canvas
+    // --- DEBUG ---
+    // console.log("getAbsoluteCoords called with relativeROI:", relativeROI); // Can be noisy
+    // --- END DEBUG ---
+    if (!relativeROI || !roiCanvas.width || !roiCanvas.height || roiCanvas.width <= 0 || roiCanvas.height <= 0) {
+         // --- DEBUG ---
+         console.warn("getAbsoluteCoords returning null due to invalid input/canvas size.", {relativeROI, w: roiCanvas.width, h: roiCanvas.height});
+         // --- END DEBUG ---
+         return null;
+    }
+    const abs = {
+        x: relativeROI.x * roiCanvas.width,
+        y: relativeROI.y * roiCanvas.height,
+        width: relativeROI.width * roiCanvas.width,
+        height: relativeROI.height * roiCanvas.height
+    };
+    // --- DEBUG ---
+    // console.log("getAbsoluteCoords calculated absolute:", abs); // Can be noisy
+    // --- END DEBUG ---
+    return abs;
+}
 
 // --- Analysis Functions ---
 // startAnalysis con DEBUG LOGS (Sin cambios, ya estaba completo)
