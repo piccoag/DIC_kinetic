@@ -200,9 +200,64 @@ async function startRecording() {
 
 function handleDataAvailable(event) { if (event.data.size > 0) { recordedChunks.push(event.data); } }
 
-function stopRecording() { /* ... (igual que antes) ... */ }
+function stopRecording() {
+    // --- DEBUG ---
+    console.log("stopRecording function CALLED.");
+    console.log("Current mediaRecorder:", mediaRecorder);
+    console.log("Current mediaRecorder state:", mediaRecorder ? mediaRecorder.state : 'N/A');
+    // --- END DEBUG ---
 
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        // --- DEBUG ---
+        console.log("Condition MET (recorder exists and is not inactive). Calling mediaRecorder.stop()...");
+        // --- END DEBUG ---
+        try {
+            mediaRecorder.stop(); // <-- La llamada clave para detener la grabación
+             // ¡Importante! No actualices la UI aquí directamente.
+             // Espera a que el evento 'onstop' (handleStop) se dispare.
+             // El evento onstop se encargará de detener los tracks, limpiar la UI, etc.
+            console.log('mediaRecorder.stop() called successfully. Waiting for onstop event...');
+        } catch (e) {
+            console.error("Error calling mediaRecorder.stop():", e);
+            // Si stop() falla, intentar limpiar manualmente
+             if (mediaStream) { mediaStream.getTracks().forEach(track => track.stop()); }
+             livePreview.srcObject = null;
+             startRecordBtn.disabled = false;
+             stopRecordBtn.disabled = true;
+             recordingStatus.textContent = '';
+             enableRoiButtons(false); // Asegurar que ROI estén deshabilitados
+             checkEnableAnalyzeButton();
+        }
+    } else {
+        // --- DEBUG ---
+        console.log("Condition NOT MET (recorder is null or already inactive). Performing direct cleanup.");
+        // --- END DEBUG ---
+        // Si no hay grabadora activa, simplemente limpiar
+        if (mediaStream) {
+            mediaStream.getTracks().forEach(track => track.stop());
+            console.log("Camera tracks stopped directly (no active recorder).");
+        }
+        livePreview.srcObject = null;
+        startRecordBtn.disabled = false;
+        stopRecordBtn.disabled = true;
+        recordingStatus.textContent = '';
+        enableRoiButtons(false); // Asegurar que ROI estén deshabilitados
+        checkEnableAnalyzeButton();
+    }
+}
 function handleStop() {
+    // --- DEBUG ---
+    console.log("handleStop (onstop event handler) TRIGGERED.");
+    // --- END DEBUG ---
+    
+    console.log("MediaRecorder 'stop' event received.");
+    // ... (resto de la función handleStop igual que antes) ...
+     if (mediaStream) { /* ... stop tracks ... */ }
+     livePreview.srcObject = null;
+     startRecordBtn.disabled = false;
+     stopRecordBtn.disabled = true;
+     recordingStatus.textContent = '';
+     // ... (resto: crear Blob, leer con FileReader, etc.) ...
     console.log("MediaRecorder 'stop' event received.");
     // ... (detener cámara, limpiar UI grabación) ...
     if (recordedChunks.length === 0) { /* ... (manejar caso sin datos) ... */ return; }
