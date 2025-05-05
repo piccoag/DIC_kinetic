@@ -433,10 +433,37 @@ function getAbsoluteCoords(relativeROI) { // For drawing on display canvas
 // --- Analysis Functions ---
 // startAnalysis con DEBUG LOGS (Sin cambios, ya estaba completo)
 async function startAnalysis() {
-    // ... (inicio de startAnalysis igual) ...
-    console.log("Starting analysis process...");
+    console.log(">>> Entering startAnalysis function..."); // Mantener este log
+
+    // Robust check for OpenCV readiness (ya lo tenías)
+    if (!cvReady || typeof cv === 'undefined' || !cv.imread) {
+         console.error("Analysis attempt failed inside startAnalysis: OpenCV is not ready.");
+         alert("Error: OpenCV no está completamente inicializado. Espera o recarga.");
+         analysisFinished(true); // Finalizar con error para resetear botones
+         return;
+    }
+     if (analyzeBtn.disabled) {
+         console.warn("startAnalysis called but button is disabled. Exiting.");
+         return;
+     }
+
+    // *** NUEVO: Re-obtener y validar la duración AHORA ***
+    videoDuration = videoPlayer.duration; // Volver a leer la duración del elemento video
+    console.log(`Re-checking video duration inside startAnalysis: ${videoDuration}`); // Log para ver el valor
+
+    if (!videoDuration || !isFinite(videoDuration) || videoDuration <= 0) {
+        // isFinite() comprueba que no sea Infinity, -Infinity, o NaN
+        console.error("Invalid video duration detected before analysis:", videoDuration);
+        alert("Error: No se pudo obtener una duración válida del video para el análisis. Intenta grabar de nuevo.");
+        analysisFinished(true); // Finalizar con error
+        return; // Detener ejecución
+    }
+    // *** FIN DE LA NUEVA VALIDACIÓN ***
+
+
+    console.log("Starting analysis process..."); // Log original
     resetAnalysis();
-    analyzeBtn.disabled = true; // <-- Intento de deshabilitar
+    analyzeBtn.disabled = true; // <-- Deshabilitar botón AHORA
     enableRoiButtons(false);
     startRecordBtn.disabled = true;
     stopRecordBtn.disabled = true;
@@ -446,16 +473,15 @@ async function startAnalysis() {
 
     const intervalSeconds = 0.5;
     let currentTime = 0;
-    const analysisEndTime = videoDuration > 0.1 ? videoDuration - 0.01 : 0;
-    // --- DEBUG ---
-    console.log(` - Calculated analysisEndTime: ${analysisEndTime?.toFixed(2)}`);
-    console.log(` - Initial currentTime: ${currentTime}`);
-    // --- END DEBUG ---
-    // Validar analysisEndTime
+    // Usar la videoDuration recién validada
+    const analysisEndTime = videoDuration - 0.01;
+    console.log(` - Calculated analysisEndTime: ${analysisEndTime?.toFixed(2)}`); // <-- ESTE VALOR YA NO DEBERÍA SER INFINITY
+
+    // Validar analysisEndTime por si acaso (aunque ya validamos videoDuration)
     if (typeof analysisEndTime === 'undefined' || isNaN(analysisEndTime) || analysisEndTime < 0) {
-         console.error("Invalid analysisEndTime calculated:", analysisEndTime, "from videoDuration:", videoDuration);
-         alert("Error: No se pudo determinar la duración válida del video para el análisis.");
-         analysisFinished(true); // Finalizar con error
+         console.error("Invalid analysisEndTime calculated:", analysisEndTime);
+         alert("Error: Cálculo de tiempo final inválido.");
+         analysisFinished(true);
          return;
     }
 
@@ -465,15 +491,16 @@ async function startAnalysis() {
     if (!videoPlayer.paused) { videoPlayer.pause(); }
 
     // Bucle principal de procesamiento (definición igual)
-    async function processNextFrame() {
-         // --- DEBUG ---
-         console.log(`>>> TOP of processNextFrame [${currentTime?.toFixed(2)}s]`);
-         // --- END DEBUG ---
+    async function processNextFrame() { /* ... (igual que antes, con sus logs internos) ... */ }
+    function scheduleNext() { /* ... (igual que antes) ... */ }
 
-         console.log(`[${currentTime.toFixed(2)}s] Entering processNextFrame.`);
-         // ... (resto de processNextFrame igual con sus logs internos) ...
-    }
+    console.log("[Analysis Start] ABOUT TO CALL processNextFrame for the first time.");
+    try {
+        processNextFrame(); // La llamada inicial
+        console.log("[Analysis Start] Initial call to processNextFrame finished executing synchronously (next steps are async).");
+    } catch (initialError) { /* ... error handling ... */ }
 
+} // Fin de startAnalysis
     function scheduleNext() { currentTime += intervalSeconds; setTimeout(processNextFrame, 0); }
 
     // --- DEBUG ---
